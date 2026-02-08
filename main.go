@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/anggakrnwn/kasir-api/database"
 	"github.com/anggakrnwn/kasir-api/handlers"
@@ -31,36 +35,29 @@ func main() {
 		Port:   viper.GetString("PORT"),
 		DBConn: viper.GetString("DB_CONN"),
 	}
-
 	if config.Port == "" {
 		config.Port = "8080"
 	}
-
 	// Setup database
 	db, err := database.InitDB(config.DBConn)
 	if err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 	defer db.Close()
-
 	productRepo := repositories.NewProductRepository(db)
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
-
 	// setup routes
 	http.HandleFunc("/api/product", productHandler.HandleProduct)
 	http.HandleFunc("/api/product/", productHandler.HandleProductByID)
-
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionService := services.NewTransactionService(transactionRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
-
 	http.HandleFunc("/api/checkout", transactionHandler.HandleCheckout)
 	http.HandleFunc("/api/report/hari-ini", func(w http.ResponseWriter, r *http.Request) {
 		transactionHandler.GetReport(w, r)
 	})
 	http.HandleFunc("/api/report", transactionHandler.HandleReport)
-
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
@@ -68,24 +65,19 @@ func main() {
 			"message": "API Running",
 		})
 	})
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-
 		fmt.Fprintln(w, "=================================================")
 		fmt.Fprintln(w, "               KASIR API ENDPOINTS              ")
 		fmt.Fprintln(w, "=================================================")
 		fmt.Fprintln(w, "")
-
 		fmt.Fprintln(w, "GENERAL")
 		fmt.Fprintln(w, "GET   /health           - Cek status API")
 		fmt.Fprintln(w, "")
-
 		fmt.Fprintln(w, "PRODUCT MANAGEMENT")
 		fmt.Fprintln(w, "GET   /api/product      - Get semua produk (filter: ?name=)")
 		fmt.Fprintln(w, "POST  /api/product      - Buat produk baru")
@@ -93,17 +85,14 @@ func main() {
 		fmt.Fprintln(w, "PUT   /api/product/{id} - Update produk")
 		fmt.Fprintln(w, "DELETE /api/product/{id} - Delete produk")
 		fmt.Fprintln(w, "")
-
 		fmt.Fprintln(w, "TRANSACTION")
 		fmt.Fprintln(w, "POST  /api/checkout     - Checkout transaksi (multi-item)")
 		fmt.Fprintln(w, "")
-
 		fmt.Fprintln(w, "REPORT")
 		fmt.Fprintln(w, "GET   /api/report/hari-ini - Laporan penjualan hari ini")
 		fmt.Fprintln(w, "GET   /api/report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD")
 		fmt.Fprintln(w, "                          - Laporan berdasarkan rentang tanggal")
 		fmt.Fprintln(w, "")
-
 		fmt.Fprintln(w, "=================================================")
 		fmt.Fprintln(w, "Contoh Request Checkout:")
 		fmt.Fprintln(w, `POST /api/checkout`)
@@ -114,8 +103,32 @@ func main() {
 		fmt.Fprintln(w, `Body: {"name": "Indomie", "price": 3000, "stock": 50}`)
 		fmt.Fprintln(w, "=================================================")
 	})
-
 	addr := "0.0.0.0:" + config.Port
-	fmt.Println("Server running on " + addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      http.DefaultServeMux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	// channel untuk signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// server di goroutine
+	go func() {
+		fmt.Println("Server running on " + addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Server error:", err)
+		}
+	}()
+	// tunggu signal
+	<-sigChan
+	fmt.Println("\nShutdown signal received, gracefully shutting down...")
+	// graceful shutdown dengan timeout 30 detik
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+	fmt.Println("Server stopped")
 }
