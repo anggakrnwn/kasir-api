@@ -55,7 +55,10 @@ func main() {
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	http.HandleFunc("/api/checkout", transactionHandler.Checkout)
-
+	http.HandleFunc("/api/report/hari-ini", func(w http.ResponseWriter, r *http.Request) {
+		transactionHandler.GetReport(w, r)
+	})
+	http.HandleFunc("/api/report", transactionHandler.HandleReport)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
