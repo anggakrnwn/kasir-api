@@ -68,8 +68,7 @@ func main() {
 	})
 	fmt.Println("Server running di localhost" + config.Port)
 
-	err = http.ListenAndServe(":"+config.Port, nil)
-	if err != nil {
-		fmt.Println("gagal running server")
-	}
+	fmt.Println("Server running di localhost:" + config.Port)
+	log.Fatal(http.ListenAndServe(":"+config.Port, nil))
+
 }
