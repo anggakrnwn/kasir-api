@@ -69,6 +69,52 @@ func main() {
 		})
 	})
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+		fmt.Fprintln(w, "=================================================")
+		fmt.Fprintln(w, "               KASIR API ENDPOINTS              ")
+		fmt.Fprintln(w, "=================================================")
+		fmt.Fprintln(w, "")
+
+		fmt.Fprintln(w, "GENERAL")
+		fmt.Fprintln(w, "GET   /health           - Cek status API")
+		fmt.Fprintln(w, "")
+
+		fmt.Fprintln(w, "PRODUCT MANAGEMENT")
+		fmt.Fprintln(w, "GET   /api/product      - Get semua produk (filter: ?name=)")
+		fmt.Fprintln(w, "POST  /api/product      - Buat produk baru")
+		fmt.Fprintln(w, "GET   /api/product/{id} - Get produk by ID")
+		fmt.Fprintln(w, "PUT   /api/product/{id} - Update produk")
+		fmt.Fprintln(w, "DELETE /api/product/{id} - Delete produk")
+		fmt.Fprintln(w, "")
+
+		fmt.Fprintln(w, "TRANSACTION")
+		fmt.Fprintln(w, "POST  /api/checkout     - Checkout transaksi (multi-item)")
+		fmt.Fprintln(w, "")
+
+		fmt.Fprintln(w, "REPORT")
+		fmt.Fprintln(w, "GET   /api/report/hari-ini - Laporan penjualan hari ini")
+		fmt.Fprintln(w, "GET   /api/report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD")
+		fmt.Fprintln(w, "                          - Laporan berdasarkan rentang tanggal")
+		fmt.Fprintln(w, "")
+
+		fmt.Fprintln(w, "=================================================")
+		fmt.Fprintln(w, "Contoh Request Checkout:")
+		fmt.Fprintln(w, `POST /api/checkout`)
+		fmt.Fprintln(w, `Body: {"items": [{"product_id": 1, "quantity": 2}]}`)
+		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "Contoh Request Produk:")
+		fmt.Fprintln(w, `POST /api/product`)
+		fmt.Fprintln(w, `Body: {"name": "Indomie", "price": 3000, "stock": 50}`)
+		fmt.Fprintln(w, "=================================================")
+	})
+
 	addr := "0.0.0.0:" + config.Port
 	fmt.Println("Server running on " + addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
