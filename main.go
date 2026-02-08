@@ -31,26 +31,36 @@ func main() {
 		Port:   viper.GetString("PORT"),
 		DBConn: viper.GetString("DB_CONN"),
 	}
+
+	if config.Port == "" {
+		config.Port = "8080"
+	}
+
 	// Setup database
 	db, err := database.InitDB(config.DBConn)
 	if err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 	defer db.Close()
+
 	productRepo := repositories.NewProductRepository(db)
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
+
 	// setup routes
 	http.HandleFunc("/api/product", productHandler.HandleProduct)
 	http.HandleFunc("/api/product/", productHandler.HandleProductByID)
+
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionService := services.NewTransactionService(transactionRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
+
 	http.HandleFunc("/api/checkout", transactionHandler.HandleCheckout)
 	http.HandleFunc("/api/report/hari-ini", func(w http.ResponseWriter, r *http.Request) {
 		transactionHandler.GetReport(w, r)
 	})
 	http.HandleFunc("/api/report", transactionHandler.HandleReport)
+
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
@@ -58,6 +68,8 @@ func main() {
 			"message": "API Running",
 		})
 	})
-	fmt.Println("Server running di localhost:" + config.Port)
-	log.Fatal(http.ListenAndServe(":"+config.Port, nil))
+
+	addr := "0.0.0.0:" + config.Port
+	fmt.Println("Server running on " + addr)
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
