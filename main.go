@@ -14,6 +14,7 @@ import (
 
 	"github.com/anggakrnwn/kasir-api/database"
 	"github.com/anggakrnwn/kasir-api/handlers"
+	"github.com/anggakrnwn/kasir-api/middlewares"
 	"github.com/anggakrnwn/kasir-api/repositories"
 	"github.com/anggakrnwn/kasir-api/services"
 	"github.com/spf13/viper"
@@ -22,6 +23,7 @@ import (
 type Config struct {
 	Port   string `mapstructure:"PORT"`
 	DBConn string `mapstructure:"DB_CONN"`
+	APIKey string `mapstructure:"API_KEY"`
 }
 
 func main() {
@@ -34,6 +36,7 @@ func main() {
 	config := Config{
 		Port:   viper.GetString("PORT"),
 		DBConn: viper.GetString("DB_CONN"),
+		APIKey: viper.GetString("API_KEY"),
 	}
 	if config.Port == "" {
 		config.Port = "8080"
@@ -44,16 +47,20 @@ func main() {
 		log.Fatal("Failed to initialize database:", err)
 	}
 	defer db.Close()
+
+	apiKeyMiddleware := middlewares.APIKey(config.APIKey)
+
 	productRepo := repositories.NewProductRepository(db)
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
 	// setup routes
 	http.HandleFunc("/api/product", productHandler.HandleProduct)
+	http.HandleFunc("/api/produk/", apiKeyMiddleware(productHandler.HandleProductByID))
 	http.HandleFunc("/api/product/", productHandler.HandleProductByID)
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transactionService := services.NewTransactionService(transactionRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
-	http.HandleFunc("/api/checkout", transactionHandler.HandleCheckout)
+	http.HandleFunc("/api/checkout", apiKeyMiddleware(transactionHandler.HandleCheckout))
 	http.HandleFunc("/api/report/hari-ini", func(w http.ResponseWriter, r *http.Request) {
 		transactionHandler.GetReport(w, r)
 	})
