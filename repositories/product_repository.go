@@ -20,7 +20,7 @@ func (repo *ProductRepository) GetAll(name string) ([]models.Product, error) {
 
 	args := []interface{}{}
 	if name != "" {
-		query += " WHERE p.name ILIKE $1"
+		query += " WHERE name ILIKE $1"
 		args = append(args, "%"+name+"%")
 	}
 

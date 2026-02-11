@@ -1,0 +1,23 @@
+# Dockerfile.dev (untuk development)
+FROM golang:1.24-alpine
+
+# Set working directory di dalam container
+WORKDIR /app
+
+# Install git (dibutuhkan untuk go mod download)
+RUN apk add --no-cache git
+
+# Copy file dependency Go
+COPY go.mod go.sum ./
+
+# Download semua dependencies
+RUN go mod download
+
+# Copy semua kode sumber
+COPY . .
+
+# Expose port yang digunakan aplikasi
+EXPOSE 8080
+
+# Command untuk menjalankan aplikasi (development mode)
+CMD ["go", "run", "main.go"]

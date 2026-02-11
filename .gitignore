@@ -1,2 +1,43 @@
-kasir-api
+# Environment
 .env
+.env.*
+!.env.example
+
+# Binary output
+kasir-api
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Go workspace cache
+*.out
+
+# Go tooling
+# Coverage files
+coverage.out
+coverage.txt
+
+# Docker override / local files
+docker-compose.override.yml
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# temp
+tmp/
+temp/
