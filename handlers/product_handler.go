@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -44,15 +45,26 @@ func (h *ProductHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	defer r.Body.Close()
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
 	var product models.Product
 
-	err := json.NewDecoder(r.Body).Decode(&product)
-	if err != nil {
+	if err := decoder.Decode(&product); err != nil {
 		http.Error(w, "incalid req body", http.StatusBadRequest)
 		return
 	}
 
-	err = h.service.Create(&product)
+	// memastikan 1 req obj
+	if decoder.Decode(&struct{}{}) != io.EOF {
+		http.Error(w, "incalid req body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.service.Create(&product)
 	if err != nil {
 		switch err {
 		case services.ErrInvalidProductName,
@@ -68,7 +80,11 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(product)
+
+	if err := json.NewEncoder(w).Encode(product); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+
 }
 
 func (h *ProductHandler) HandleProductByID(w http.ResponseWriter, r *http.Request) {
