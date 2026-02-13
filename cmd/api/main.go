@@ -18,12 +18,6 @@ import (
 	"github.com/anggakrnwn/kasir-api/services"
 )
 
-// type Config struct {
-// 	Port   string `mapstructure:"PORT"`
-// 	DBConn string `mapstructure:"DB_CONN"`
-// 	APIKey string `mapstructure:"API_KEY"`
-// }
-
 func main() {
 
 	cfg, err := config.Init()

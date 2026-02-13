@@ -1,8 +1,17 @@
 package services
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/anggakrnwn/kasir-api/models"
 	"github.com/anggakrnwn/kasir-api/repositories"
+)
+
+var (
+	ErrInvalidProductName  = errors.New("product name cannot be empty")
+	ErrInvalidProductPrice = errors.New("product price must be greater than zero")
+	ErrInvalidProductStock = errors.New("product stock cannot be negative")
 )
 
 type ProductService struct {
@@ -19,6 +28,17 @@ func (s *ProductService) GetAll(name string) ([]models.Product, error) {
 }
 
 func (s *ProductService) Create(data *models.Product) error {
+
+	if strings.TrimSpace(data.Name) == "" {
+		return ErrInvalidProductName
+	}
+	if data.Price <= 0 {
+		return ErrInvalidProductPrice
+	}
+	if data.Stock < 0 {
+		return ErrInvalidProductStock
+	}
+
 	return s.repo.Create(data)
 }
 

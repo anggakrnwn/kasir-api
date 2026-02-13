@@ -43,7 +43,9 @@ func (h *ProductHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
+
 	var product models.Product
+
 	err := json.NewDecoder(r.Body).Decode(&product)
 	if err != nil {
 		http.Error(w, "incalid req body", http.StatusBadRequest)
@@ -52,7 +54,15 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.Create(&product)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		switch err {
+		case services.ErrInvalidProductName,
+			services.ErrInvalidProductPrice,
+			services.ErrInvalidProductStock:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		default:
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+
 		return
 	}
 
